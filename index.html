@@ -17,6 +17,18 @@
     .row { display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom:0.25rem; }
     .row span.value { font-variant-numeric:tabular-nums; font-weight:600; }
     footer { margin-top:1rem; font-size:0.7rem; color:#666; text-align:center; }
+
+    /* Mechanical Power colors */
+    .mp-low   { color:#0a7a0a; }   /* < 12 J/min */
+    .mp-mid   { color:#b38b00; }   /* 12-17 J/min */
+    .mp-high  { color:#d26b00; }   /* 17-21 J/min */
+    .mp-very  { color:#c00000; }   /* > 21 J/min */
+
+    /* Driving Pressure colors */
+    .dp-low   { color:#0a7a0a; }   /* < 10 cmH2O */
+    .dp-mid   { color:#b38b00; }   /* 10-14 cmH2O */
+    .dp-high  { color:#d26b00; }   /* 14-18 cmH2O */
+    .dp-very  { color:#c00000; }   /* > 18 cmH2O */
   </style>
 </head>
 <body>
@@ -91,7 +103,7 @@
   <div class="row"><span>Resistencia (cmH₂O / (L/s))</span><span class="value" id="resOut">-</span></div>
   <div class="row"><span>Tau (s)</span><span class="value" id="tauOut">-</span></div>
   <div class="row"><span>3·Tau (s)</span><span class="value" id="tau3Out">-</span></div>
-  <div class="row"><span>P motora (cmH₂O)</span><span class="value" id="pmotOut">-</span></div>
+  <div class="row"><span>Driving Pressure (ΔP)</span><span class="value" id="dpOut">-</span></div>
 </div>
 
 <div class="card">
@@ -99,8 +111,14 @@
   <div style="font-size:0.8rem;margin-bottom:0.5rem;">
     Fórmulas simplificadas (Gattinoni-like). Valores orientativos; adaptar a protocolo local.
   </div>
-  <div class="row"><span>Modo volumen (J/min)</span><span class="value" id="mpVolOut">-</span></div>
-  <div class="row"><span>Modo presión (J/min)</span><span class="value" id="mpPresOut">-</span></div>
+  <div class="row">
+    <span>Modo volumen (J/min)</span>
+    <span class="value" id="mpVolOut">-</span>
+  </div>
+  <div class="row">
+    <span>Modo presión (J/min)</span>
+    <span class="value" id="mpPresOut">-</span>
+  </div>
 </div>
 
 <div class="card">
@@ -135,6 +153,51 @@ function num(id){
   return isNaN(v)?null:v;
 }
 function fmt(x,d){return(x==null||!isFinite(x))?'-':x.toFixed(d);}
+
+// Mechanical Power display with color
+function setMpDisplay(value, elementId){
+  const el=document.getElementById(elementId);
+  if(!el) return;
+  el.className = "value"; // reset base class
+
+  if(value==null || !isFinite(value)){
+    el.textContent='-';
+    return;
+  }
+  el.textContent=value.toFixed(2);
+
+  if(value < 12){
+    el.classList.add('mp-low');
+  } else if(value < 17){
+    el.classList.add('mp-mid');
+  } else if(value < 21){
+    el.classList.add('mp-high');
+  } else {
+    el.classList.add('mp-very');
+  }
+}
+
+// Driving Pressure display with color
+function setDpDisplay(value){
+  const el=document.getElementById('dpOut');
+  el.className = "value"; // reset base class
+
+  if(value==null || !isFinite(value)){
+    el.textContent='-';
+    return;
+  }
+  el.textContent=value.toFixed(1);
+
+  if(value < 10){
+    el.classList.add('dp-low');
+  } else if(value < 14){
+    el.classList.add('dp-mid');
+  } else if(value < 18){
+    el.classList.add('dp-high');
+  } else {
+    el.classList.add('dp-very');
+  }
+}
 
 function calculate(){
   const sex=document.getElementById('sex').value;
@@ -210,15 +273,16 @@ function calculate(){
     tau3=3*tau;
   }
 
-  let pm=null;
-  if(pplat!=null && peep!=null) pm=pplat-peep;
-
   document.getElementById('cdynOut').textContent=fmt(cd,1);
   document.getElementById('cestOut').textContent=fmt(ce,1);
   document.getElementById('resOut').textContent=fmt(res,2);
   document.getElementById('tauOut').textContent=fmt(tau,2);
   document.getElementById('tau3Out').textContent=fmt(tau3,2);
-  document.getElementById('pmotOut').textContent=fmt(pm,1);
+
+  // Driving Pressure = Pplat - PEEP
+  let dp=null;
+  if(pplat!=null && peep!=null) dp=pplat-peep;
+  setDpDisplay(dp);
 
   // Mechanical Power (aprox)
   let mpVol=null, mpPres=null;
@@ -231,17 +295,17 @@ function calculate(){
     const deltaP=pf;
     mpPres=0.098*fr*vtL*(deltaP+peep);
   }
-  document.getElementById('mpVolOut').textContent=fmt(mpVol,2);
-  document.getElementById('mpPresOut').textContent=fmt(mpPres,2);
+  setMpDisplay(mpVol,'mpVolOut');
+  setMpDisplay(mpPres,'mpPresOut');
 
   // Stress index: P(t)=k·t^b -> b = ln(P75/P25)/ln(0.75/0.25)
   const p25=num('p25'), p75=num('p75');
   let si=null, cat='-';
   if(p25 && p75 && p25>0 && p75>0){
     si=Math.log(p75/p25)/Math.log(0.75/0.25);
-    if(si<0.95) cat="< 0.95: curva cóncava hacia abajo, tendencia a colapso/reclutamiento";
+    if(si<0.95)      cat="< 0.95: curva cóncava hacia abajo, tendencia a colapso/reclutamiento";
     else if(si>1.05) cat="> 1.05: curva cóncava hacia arriba, tendencia a sobredistensión";
-    else cat="≈ 1: curva aproximadamente lineal";
+    else             cat="≈ 1: curva aproximadamente lineal";
   }
   document.getElementById('siOut').textContent=fmt(si,2);
   document.getElementById('siCatOut').textContent=cat;
