@@ -95,10 +95,19 @@
 </div>
 
 <div class="card">
+  <h2>Mechanical Power (aprox.)</h2>
+  <div style="font-size:0.8rem;margin-bottom:0.5rem;">
+    Fórmulas simplificadas (Gattinoni-like). Valores orientativos; adaptar a protocolo local.
+  </div>
+  <div class="row"><span>Modo volumen (J/min)</span><span class="value" id="mpVolOut">-</span></div>
+  <div class="row"><span>Modo presión (J/min)</span><span class="value" id="mpPresOut">-</span></div>
+</div>
+
+<div class="card">
   <h2>Stress index (aprox.)</h2>
   <div style="font-size:0.8rem;margin-bottom:0.5rem;">
-    Asumiendo flujo inspiratorio constante y curva presión-tiempo ajustable a P(t) ≈ k·t^b.<br/>
-    Ingresar la presión al 25% y 75% del tiempo inspiratorio (sobre la misma respiración).
+    Asumiendo flujo inspiratorio constante y curva presión-tiempo P(t) ≈ k·t^b.<br/>
+    Ingresar la presión al 25% y 75% del tiempo inspiratorio en la misma respiración.
   </div>
   <div class="grid">
     <div><label>Presión 25% Ti (cmH₂O)</label><input id="p25" type="number"/></div>
@@ -110,7 +119,7 @@
   </div>
   <div style="font-size:0.8rem;margin-top:0.25rem;">
     Interpretación: <span id="siCatOut">-</span><br/>
-    &lt; 0.95: tendencia a colapso/reclutamiento · 0.95–1.05: relativamente lineal · &gt; 1.05: tendencia a sobredistensión.
+    &lt; 0.95: tendencia a colapso/reclutamiento · 0.95–1.05: curva ~lineal · &gt; 1.05: tendencia a sobredistensión.
   </div>
 </div>
 
@@ -150,7 +159,7 @@ function calculate(){
   document.getElementById('lbmOut').textContent=fmt(lbm,1);
   document.getElementById('bmiOut').textContent=fmt(bmi,1);
 
-  // VT recomendado
+  // VT recomendado por PBW
   let vt6=null, vt7=null, vt8=null;
   if(pbw){
     vt6=pbw*6;
@@ -211,7 +220,21 @@ function calculate(){
   document.getElementById('tau3Out').textContent=fmt(tau3,2);
   document.getElementById('pmotOut').textContent=fmt(pm,1);
 
-  // Stress index aprox: P(t)=k·t^b -> b = ln(P75/P25)/ln(0.75/0.25)
+  // Mechanical Power (aprox)
+  let mpVol=null, mpPres=null;
+  if(fr && vtL && pf!=null && pplat!=null && peep!=null){
+    // Volumen: MP ≈ 0.098 * RR * VT * (Ppico - 0.5*(Pplat - PEEP))
+    mpVol=0.098*fr*vtL*(pf-0.5*(pplat-peep));
+  }
+  if(fr && vtL && pf!=null && peep!=null){
+    // Presión: aproximación usando Pf-insp como presión de conducción
+    const deltaP=pf;
+    mpPres=0.098*fr*vtL*(deltaP+peep);
+  }
+  document.getElementById('mpVolOut').textContent=fmt(mpVol,2);
+  document.getElementById('mpPresOut').textContent=fmt(mpPres,2);
+
+  // Stress index: P(t)=k·t^b -> b = ln(P75/P25)/ln(0.75/0.25)
   const p25=num('p25'), p75=num('p75');
   let si=null, cat='-';
   if(p25 && p75 && p25>0 && p75>0){
