@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Calculadora ventilatoria - Augusto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family:-apple-system,system-ui,sans-serif; margin:0; padding:1rem; max-width:900px; margin-inline:auto; background:#f5f5f5; }
+    h1 { font-size:1.4rem; text-align:center; margin-bottom:0.5rem; }
+    h2 { font-size:1.1rem; margin-top:1.2rem; border-bottom:1px solid #ccc; padding-bottom:0.25rem; }
+    .card { background:#fff; border-radius:0.75rem; padding:1rem; margin-top:1rem; box-shadow:0 2px 6px rgba(0,0,0,0.06); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.75rem 1rem; }
+    label { font-size:0.85rem; display:block; margin-bottom:0.1rem; }
+    input, select { width:100%; padding:0.35rem 0.5rem; border-radius:0.5rem; border:1px solid #ccc; font-size:0.95rem; box-sizing:border-box; }
+    .btn { display:inline-block; padding:0.6rem 1.2rem; border-radius:999px; border:none; background:#007aff; color:#fff; font-size:1rem; font-weight:600; margin-top:0.5rem; }
+    .btn:active { opacity:0.7; }
+    .row { display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom:0.25rem; }
+    .row span.value { font-variant-numeric:tabular-nums; font-weight:600; }
+    footer { margin-top:1rem; font-size:0.7rem; color:#666; text-align:center; }
+  </style>
+</head>
+<body>
+<h1>Calculadora ventilatoria</h1>
+
+<div class="card">
+  <h2>Datos antropométricos</h2>
+  <div class="grid">
+    <div><label>Nombre</label><input id="patientName" type="text"/></div>
+    <div><label>Edad (años)</label><input id="age" type="number"/></div>
+    <div>
+      <label>Sexo</label>
+      <select id="sex">
+        <option value="">Sel…</option>
+        <option value="M">Masculino</option>
+        <option value="F">Femenino</option>
+      </select>
+    </div>
+    <div><label>Altura (cm)</label><input id="heightCm" type="number"/></div>
+    <div><label>Peso real (kg)</label><input id="weightKg" type="number"/></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Datos de ventilación</h2>
+  <div class="grid">
+    <div><label>Pf-insp (cmH₂O)</label><input id="pfInsp" type="number"/></div>
+    <div><label>Pplat (cmH₂O)</label><input id="pplat" type="number"/></div>
+    <div><label>PEEP (cmH₂O)</label><input id="peep" type="number"/></div>
+    <div><label>VT (mL)</label><input id="vtMl" type="number"/></div>
+    <div><label>FR (rpm)</label><input id="fr" type="number"/></div>
+    <div>
+      <label>I : E</label>
+      <div style="display:flex;gap:0.25rem;">
+        <input id="iPart" type="number"/>
+        <span>:</span>
+        <input id="ePart" type="number"/>
+      </div>
+    </div>
+  </div>
+  <button class="btn" onclick="calculate()">Calcular</button>
+</div>
+
+<div class="card">
+  <h2>Cálculos antropométricos</h2>
+  <div class="row"><span>Peso predicho (kg, Devine)</span><span class="value" id="pbwOut">-</span></div>
+  <div class="row"><span>Peso magro (kg, Boer)</span><span class="value" id="lbmOut">-</span></div>
+  <div class="row"><span>IMC (kg/m²)</span><span class="value" id="bmiOut">-</span></div>
+</div>
+
+<div class="card">
+  <h2>VT recomendado (ml/kg PBW)</h2>
+  <div class="row"><span>6 ml/kg</span><span class="value" id="vt6Out">-</span></div>
+  <div class="row"><span>7 ml/kg</span><span class="value" id="vt7Out">-</span></div>
+  <div class="row"><span>8 ml/kg</span><span class="value" id="vt8Out">-</span></div>
+</div>
+
+<div class="card">
+  <h2>Tiempos y flujos</h2>
+  <div class="row"><span>Tciclo (s)</span><span class="value" id="tCicloOut">-</span></div>
+  <div class="row"><span>Ti (s)</span><span class="value" id="tiOut">-</span></div>
+  <div class="row"><span>Te (s)</span><span class="value" id="teOut">-</span></div>
+  <div class="row"><span>Flujo (L/min)</span><span class="value" id="flowMinOut">-</span></div>
+  <div class="row"><span>Flujo (L/s)</span><span class="value" id="flowSOut">-</span></div>
+  <div class="row"><span>VME (L/min)</span><span class="value" id="vmeOut">-</span></div>
+</div>
+
+<div class="card">
+  <h2>Mecánica respiratoria</h2>
+  <div class="row"><span>C dyn (mL/cmH₂O)</span><span class="value" id="cdynOut">-</span></div>
+  <div class="row"><span>C est (mL/cmH₂O)</span><span class="value" id="cestOut">-</span></div>
+  <div class="row"><span>Resistencia (cmH₂O / (L/s))</span><span class="value" id="resOut">-</span></div>
+  <div class="row"><span>Tau (s)</span><span class="value" id="tauOut">-</span></div>
+  <div class="row"><span>3·Tau (s)</span><span class="value" id="tau3Out">-</span></div>
+  <div class="row"><span>P motora (cmH₂O)</span><span class="value" id="pmotOut">-</span></div>
+</div>
+
+<div class="card">
+  <h2>Stress index (aprox.)</h2>
+  <div style="font-size:0.8rem;margin-bottom:0.5rem;">
+    Asumiendo flujo inspiratorio constante y curva presión-tiempo ajustable a P(t) ≈ k·t^b.<br/>
+    Ingresar la presión al 25% y 75% del tiempo inspiratorio (sobre la misma respiración).
+  </div>
+  <div class="grid">
+    <div><label>Presión 25% Ti (cmH₂O)</label><input id="p25" type="number"/></div>
+    <div><label>Presión 75% Ti (cmH₂O)</label><input id="p75" type="number"/></div>
+  </div>
+  <div class="row" style="margin-top:0.5rem;">
+    <span>Stress index (b)</span>
+    <span class="value" id="siOut">-</span>
+  </div>
+  <div style="font-size:0.8rem;margin-top:0.25rem;">
+    Interpretación: <span id="siCatOut">-</span><br/>
+    &lt; 0.95: tendencia a colapso/reclutamiento · 0.95–1.05: relativamente lineal · &gt; 1.05: tendencia a sobredistensión.
+  </div>
+</div>
+
+<footer>
+  Herramienta orientativa / educativa. No reemplaza juicio clínico ni protocolos institucionales.
+</footer>
+
+<script>
+function num(id){
+  const el=document.getElementById(id);
+  if(!el||!el.value) return null;
+  const v=parseFloat(el.value.replace(',','.'));
+  return isNaN(v)?null:v;
+}
+function fmt(x,d){return(x==null||!isFinite(x))?'-':x.toFixed(d);}
+
+function calculate(){
+  const sex=document.getElementById('sex').value;
+  const height=num('heightCm');
+  const weight=num('weightKg');
+
+  let pbw=null, lbm=null, bmi=null;
+  if(height && sex==='M') pbw=50+0.91*(height-152.4);
+  if(height && sex==='F') pbw=45.5+0.91*(height-152.4);
+
+  if(height && weight){
+    const h=height/100;
+    bmi=weight/(h*h);
+  }
+
+  if(height && weight){
+    if(sex==='M') lbm=0.407*weight+0.267*height-19.2;
+    if(sex==='F') lbm=0.252*weight+0.473*height-48.3;
+  }
+
+  document.getElementById('pbwOut').textContent=fmt(pbw,1);
+  document.getElementById('lbmOut').textContent=fmt(lbm,1);
+  document.getElementById('bmiOut').textContent=fmt(bmi,1);
+
+  // VT recomendado
+  let vt6=null, vt7=null, vt8=null;
+  if(pbw){
+    vt6=pbw*6;
+    vt7=pbw*7;
+    vt8=pbw*8;
+  }
+  document.getElementById('vt6Out').textContent=fmt(vt6,0);
+  document.getElementById('vt7Out').textContent=fmt(vt7,0);
+  document.getElementById('vt8Out').textContent=fmt(vt8,0);
+
+  // Ventilación
+  const pf=num('pfInsp'), pplat=num('pplat'), peep=num('peep');
+  const vtMl=num('vtMl'), fr=num('fr');
+  const I=num('iPart'), E=num('ePart');
+  const vtL=vtMl?vtMl/1000:null;
+
+  let tC=null, ti=null, te=null;
+  if(fr) tC=60/fr;
+  if(tC && I && E){
+    ti=tC*(I/(I+E));
+    te=tC-ti;
+  }
+
+  let flowMin=null, flowS=null, vme=null;
+  if(vtL && ti){
+    flowMin=vtL*60/ti;
+    flowS=flowMin/60;
+  }
+  if(vtL && fr) vme=vtL*fr;
+
+  document.getElementById('tCicloOut').textContent=fmt(tC,2);
+  document.getElementById('tiOut').textContent=fmt(ti,2);
+  document.getElementById('teOut').textContent=fmt(te,2);
+  document.getElementById('flowMinOut').textContent=fmt(flowMin,1);
+  document.getElementById('flowSOut').textContent=fmt(flowS,2);
+  document.getElementById('vmeOut').textContent=fmt(vme,1);
+
+  let cd=null, ce=null;
+  if(vtMl && pf!=null && peep!=null && (pf-peep)>0) cd=vtMl/(pf-peep);
+  if(vtMl && pplat!=null && peep!=null && (pplat-peep)>0) ce=vtMl/(pplat-peep);
+
+  let res=null;
+  if(pf!=null && pplat!=null && flowS && flowS>0) res=(pf-pplat)/flowS;
+
+  let tau=null, tau3=null;
+  if(res && ce){
+    tau=res*(ce/1000);
+    tau3=3*tau;
+  }
+
+  let pm=null;
+  if(pplat!=null && peep!=null) pm=pplat-peep;
+
+  document.getElementById('cdynOut').textContent=fmt(cd,1);
+  document.getElementById('cestOut').textContent=fmt(ce,1);
+  document.getElementById('resOut').textContent=fmt(res,2);
+  document.getElementById('tauOut').textContent=fmt(tau,2);
+  document.getElementById('tau3Out').textContent=fmt(tau3,2);
+  document.getElementById('pmotOut').textContent=fmt(pm,1);
+
+  // Stress index aprox: P(t)=k·t^b -> b = ln(P75/P25)/ln(0.75/0.25)
+  const p25=num('p25'), p75=num('p75');
+  let si=null, cat='-';
+  if(p25 && p75 && p25>0 && p75>0){
+    si=Math.log(p75/p25)/Math.log(0.75/0.25);
+    if(si<0.95) cat="< 0.95: curva cóncava hacia abajo, tendencia a colapso/reclutamiento";
+    else if(si>1.05) cat="> 1.05: curva cóncava hacia arriba, tendencia a sobredistensión";
+    else cat="≈ 1: curva aproximadamente lineal";
+  }
+  document.getElementById('siOut').textContent=fmt(si,2);
+  document.getElementById('siCatOut').textContent=cat;
+}
+</script>
+</body>
+</html>
